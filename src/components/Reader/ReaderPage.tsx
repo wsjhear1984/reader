@@ -14,9 +14,9 @@ const ReaderPage: React.FC = () => {
   const book = books.find(b => b.id === id);
 
   useEffect(() => {
-    if (book) {
+    if (id && book) {
       // Update last read timestamp
-      updateLastRead(book.id, new Date().toISOString());
+      updateLastRead(id, new Date().toISOString());
       
       // Update document title
       document.title = `${book.title} | eReader`;
@@ -26,7 +26,7 @@ const ReaderPage: React.FC = () => {
       // Reset title on unmount
       document.title = 'eReader';
     };
-  }, [book, updateLastRead, id]); // Added id to dependencies
+  }, [id]); // Only depend on id, not book or updateLastRead
 
   if (!book) {
     return (
