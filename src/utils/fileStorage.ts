@@ -47,3 +47,13 @@ export async function deleteFile(id: string) {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+export async function checkFileExists(id: string): Promise<boolean> {
+  try {
+    const file = await getFile(id);
+    return !!file;
+  } catch (error) {
+    console.error('Error checking file existence:', error);
+    return false;
+  }
+}
