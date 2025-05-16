@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Book, Grid, List, Search, SortAsc, Grid3X3, ArrowUpDown, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBookStore } from '../store/bookStore';
+import { deleteFile } from '../utils/fileStorage';
 import BookCard from './BookCard';
 import EmptyLibrary from './EmptyLibrary';
 
 const BookLibrary: React.FC = () => {
   const navigate = useNavigate();
-  const { books } = useBookStore();
+  const { books, removeBook } = useBookStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'title' | 'author' | 'lastRead'>('lastRead');
@@ -37,6 +38,15 @@ const BookLibrary: React.FC = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
+  // Delete book handler
+  const handleDeleteBook = async (bookId: string, fileUrl: string) => {
+    removeBook(bookId);
+    if (fileUrl.startsWith('indexeddb://')) {
+      const fileId = fileUrl.replace('indexeddb://', '');
+      await deleteFile(fileId);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -46,6 +56,17 @@ const BookLibrary: React.FC = () => {
       }
     }
   };
+
+  // Pass delete handler to BookCard
+  const renderBookCard = (book: Book) => (
+    <BookCard
+      key={book.id}
+      book={book}
+      viewMode={viewMode}
+      onClick={() => navigate(`/reader/${book.id}`)}
+      onDelete={() => handleDeleteBook(book.id, book.fileUrl)}
+    />
+  );
 
   return (
     <div className="px-4 md:px-6 py-8 max-w-7xl mx-auto">
@@ -132,9 +153,7 @@ const BookLibrary: React.FC = () => {
               initial="hidden"
               animate="visible"
             >
-              {sortedBooks.map(book => (
-                <BookCard key={book.id} book={book} viewMode="grid" onClick={() => navigate(`/reader/${book.id}`)} />
-              ))}
+              {sortedBooks.map(renderBookCard)}
             </motion.div>
           ) : (
             <motion.div 
@@ -143,9 +162,7 @@ const BookLibrary: React.FC = () => {
               initial="hidden"
               animate="visible"
             >
-              {sortedBooks.map(book => (
-                <BookCard key={book.id} book={book} viewMode="list" onClick={() => navigate(`/reader/${book.id}`)} />
-              ))}
+              {sortedBooks.map(renderBookCard)}
             </motion.div>
           )}
         </>

@@ -8,9 +8,10 @@ interface BookCardProps {
   book: Book;
   viewMode: 'grid' | 'list';
   onClick: () => void;
+  onDelete?: () => void;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick, onDelete }) => {
   const getFormatIcon = () => {
     switch (book.format) {
       case 'epub':
@@ -41,7 +42,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick }) => {
   if (viewMode === 'grid') {
     return (
       <motion.div
-        className="flex flex-col overflow-hidden rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+        className="flex flex-col overflow-hidden rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow group"
         variants={cardVariants}
         whileHover="hover"
         onClick={onClick}
@@ -60,6 +61,16 @@ const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick }) => {
                 <p className="text-sm font-medium text-gray-800 line-clamp-3">{book.title}</p>
               </div>
             </div>
+          )}
+          {/* Delete button (top right corner, visible on hover) */}
+          {onDelete && (
+            <button
+              className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-red-100 text-gray-500 hover:text-red-600 shadow transition-colors opacity-0 group-hover:opacity-100"
+              title="Delete book"
+              onClick={e => { e.stopPropagation(); onDelete(); }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           )}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -92,7 +103,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick }) => {
 
   return (
     <motion.div
-      className="flex items-center space-x-4 p-4 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+      className="flex items-center space-x-4 p-4 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow group"
       variants={cardVariants}
       whileHover="hover"
       onClick={onClick}
@@ -132,6 +143,16 @@ const BookCard: React.FC<BookCardProps> = ({ book, viewMode, onClick }) => {
           {book.lastRead ? formatDistanceToNow(new Date(book.lastRead)) : 'Never opened'}
         </span>
       </div>
+      {/* Delete button (right side, visible on hover) */}
+      {onDelete && (
+        <button
+          className="ml-4 p-1.5 rounded-full bg-white/80 hover:bg-red-100 text-gray-500 hover:text-red-600 shadow transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete book"
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
     </motion.div>
   );
 };
