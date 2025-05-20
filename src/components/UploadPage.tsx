@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, AlertCircle, Check, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBookStore } from '../store/bookStore';
+import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { generateId } from '../utils/id';
 import { storeFile } from '../utils/fileStorage';
@@ -15,7 +16,14 @@ const UploadPage: React.FC = () => {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const { addBook } = useBookStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
+
+  // Redirect if not logged in
+  if (!user) {
+    navigate('/login');
+    return null;
+  }
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -78,16 +86,16 @@ const UploadPage: React.FC = () => {
     setError(null);
 
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Process each file
       for (const file of files) {
         const format = file.name.split('.').pop()?.toLowerCase() as 'epub' | 'pdf' | 'txt';
         const id = generateId();
+        
+        // Store file in IndexedDB
         await storeFile(id, file);
         const fileUrl = `indexeddb://${id}`;
-        addBook({
+        
+        // Add book to Supabase via bookStore
+        await addBook({
           id,
           title: file.name.replace(/\.(epub|pdf|txt)$/i, ''),
           author: 'Unknown Author',
@@ -107,6 +115,7 @@ const UploadPage: React.FC = () => {
       }, 2000);
     } catch (err) {
       setError("Failed to upload files. Please try again.");
+      console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
