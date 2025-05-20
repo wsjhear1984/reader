@@ -7,6 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import { generateId } from '../utils/id';
 import { storeFile } from '../utils/fileStorage';
 
+// Fix for JSX/TSX implicit any errors in JSX: add a global JSX namespace if missing
+// If you still see errors, ensure your tsconfig includes "jsx": "react-jsx" or "react" and you have @types/react installed
+
+const MAX_FILE_SIZE_MB = 50;
+
 const UploadPage: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -36,19 +41,22 @@ const UploadPage: React.FC = () => {
     }
   };
 
-  const validateFiles = (fileList: FileList | null): File[] => {
+  const validateFiles = (fileList: FileList | null, existingFiles: File[]): File[] => {
     if (!fileList) return [];
-    
     const validFiles: File[] = [];
-    const validTypes = ['.epub', '.pdf', '.txt', 'application/epub+zip', 'application/pdf', 'text/plain'];
-    
+    const validExtensions = ['epub', 'pdf', 'txt'];
+    const maxSize = MAX_FILE_SIZE_MB * 1024 * 1024;
+
     Array.from(fileList).forEach(file => {
-      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (validTypes.includes(file.type) || validTypes.includes(fileExtension)) {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (
+        ext && validExtensions.includes(ext) &&
+        file.size <= maxSize &&
+        !existingFiles.some(f => f.name === file.name && f.size === file.size)
+      ) {
         validFiles.push(file);
       }
     });
-    
     return validFiles;
   };
 
@@ -56,65 +64,71 @@ const UploadPage: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
-    const validFiles = validateFiles(e.dataTransfer.files);
+    const validFiles = validateFiles(e.dataTransfer.files, files);
     if (validFiles.length > 0) {
-      setFiles((prev: File[]) => [...prev, ...validFiles]);
+      setFiles(prev => [...prev, ...validFiles]);
       setError(null);
     } else {
-      setError("Please upload only EPUB, PDF, or TXT files.");
+      setError(`Please upload only EPUB, PDF, or TXT files under ${MAX_FILE_SIZE_MB}MB. No duplicates allowed.`);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const validFiles = validateFiles(e.target.files);
+    const validFiles = validateFiles(e.target.files, files);
     if (validFiles.length > 0) {
-      setFiles((prev: File[]) => [...prev, ...validFiles]);
+      setFiles(prev => [...prev, ...validFiles]);
       setError(null);
     } else {
-      setError("Please upload only EPUB, PDF, or TXT files.");
+      setError(`Please upload only EPUB, PDF, or TXT files under ${MAX_FILE_SIZE_MB}MB. No duplicates allowed.`);
     }
   };
 
   const handleUpload = async () => {
+    if (!user) {
+      setError("You must be logged in to upload files.");
+      return;
+    }
     if (files.length === 0) {
       setError("Please select at least one file to upload.");
       return;
     }
-
     setUploading(true);
     setError(null);
-
     try {
       for (const file of files) {
         const format = file.name.split('.').pop()?.toLowerCase() as 'epub' | 'pdf' | 'txt';
         const id = generateId();
-        
-        // Store file in IndexedDB
-        await storeFile(id, file);
+        try {
+          await storeFile(id, file);
+        } catch (err) {
+          setError(`Failed to store file: ${file.name}. ${(err as Error).message}`);
+          return;
+        }
         const fileUrl = `indexeddb://${id}`;
-        
-        // Add book to Supabase via bookStore
-        await addBook({
-          id,
-          title: file.name.replace(/\.(epub|pdf|txt)$/i, ''),
-          author: 'Unknown Author',
-          format,
-          fileUrl,
-          coverUrl: null,
-          progress: 0,
-          lastRead: null,
-          source: 'local'
-        });
+        try {
+          await addBook({
+            id,
+            title: file.name.replace(/\.(epub|pdf|txt)$/i, ''),
+            author: 'Unknown Author',
+            format,
+            fileUrl,
+            coverUrl: null,
+            progress: 0,
+            lastRead: null,
+            source: 'local'
+          });
+        } catch (err) {
+          setError(`Failed to add book: ${file.name}. ${(err as Error).message}`);
+          return;
+        }
       }
-
       setSuccess(true);
       setFiles([]);
       setTimeout(() => {
         navigate('/');
       }, 2000);
     } catch (err) {
-      setError("Failed to upload files. Please try again.");
+      setError(`Failed to upload files. ${(err as Error).message}`);
       console.error('Upload error:', err);
     } finally {
       setUploading(false);
