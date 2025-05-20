@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Book, Upload, HardDrive, Moon, Sun, Menu, X, Home } from 'lucide-react';
+import { Book, Upload, HardDrive, Moon, Sun, Menu, X, Home, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '../store/themeStore';
+import { useAuthStore } from '../store/authStore';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useThemeStore();
+  const { signOut, user } = useAuthStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -24,6 +26,15 @@ const Header: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const isActive = (path: string) => {
@@ -81,16 +92,24 @@ const Header: React.FC = () => {
             </button>
           </nav>
 
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
             <button
               onClick={toggleTheme}
-              className="ml-4 p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
 
-            <div className="md:hidden ml-2">
+            <button
+              onClick={handleSignOut}
+              className="hidden md:flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <LogOut size={18} />
+              <span>Sign out</span>
+            </button>
+
+            <div className="md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -162,6 +181,13 @@ const Header: React.FC = () => {
                 >
                   <HardDrive size={20} />
                   <span>Google Drive</span>
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-3 p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <LogOut size={20} />
+                  <span>Sign out</span>
                 </button>
               </nav>
             </motion.div>
